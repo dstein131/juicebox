@@ -24,7 +24,7 @@ usersRouter.post('/login',async(req,res,next) => {
    const {username,password} = req.body;
   
 
-   // request must have both
+  
   if (!username || !password) {
     next({
       name: "MissingCredentialsError",
@@ -37,7 +37,7 @@ usersRouter.post('/login',async(req,res,next) => {
 
 
     if (user && user.password == password) {
-      // create token & return to user
+    
       const token = jwt.sign({id:user.id, username},process.env.JWT_SECRET,{expiresIn:'1w'});
       console.log(token);
       res.send({message: "you're logged in!",token });
