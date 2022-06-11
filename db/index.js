@@ -85,26 +85,26 @@ async function getUserById(userId) {
   }
 }
 
-async function createPost({ authorId, title, content, tags = [] }) {
-  try {
-    const {
-      rows: [post],
-    } = await client.query(
-      `
-        insert into posts ("authorId", title, content)
-        values ($1, $2, $3)
-        returning *;
-      `,
-      [authorId, title, content]
-    );
-
-    const tagList = await createTags(tags);
-
-    return await addTagsToPost(post.id, tagList);
-  } catch (err) {
-    throw err;
+async function createPost({
+    authorId,
+    title,
+    content,
+    tags = []
+  }) {
+    try {
+      const { rows: [ post ] } = await client.query(`
+        INSERT INTO posts("authorId", title, content) 
+        VALUES($1, $2, $3)
+        RETURNING *;
+      `, [authorId, title, content]);
+  
+      const tagList = await createTags(tags);
+  
+      return await addTagsToPost(post.id, tagList);
+    } catch (error) {
+      throw error;
+    }
   }
-}
 
 async function updatePost(postId, fields = {}) {
   const { tags } = fields;
@@ -261,49 +261,45 @@ async function addTagsToPost(postId, tagList) {
 }
 
 async function getPostById(postId) {
-  try {
-    const {
-      rows: [post],
-    } = await client.query(
-      `
+    try {
+      const { rows: [ post ]  } = await client.query(`
         SELECT *
         FROM posts
         WHERE id=$1;
-      `,
-      [postId]
-    );
-
-    const { rows: tags } = await client.query(
-      `
+      `, [postId]);
+  
+      // THIS IS NEW
+      if (!post) {
+        throw {
+          name: "PostNotFoundError",
+          message: "Could not find a post with that postId"
+        };
+      }
+      // NEWNESS ENDS HERE
+  
+      const { rows: tags } = await client.query(`
         SELECT tags.*
         FROM tags
         JOIN post_tags ON tags.id=post_tags."tagId"
         WHERE post_tags."postId"=$1;
-      `,
-      [postId]
-    );
-
-    const {
-      rows: [author],
-    } = await client.query(
-      `
+      `, [postId])
+  
+      const { rows: [author] } = await client.query(`
         SELECT id, username, name, location
         FROM users
         WHERE id=$1;
-      `,
-      [post.authorId]
-    );
-
-    post.tags = tags;
-    post.author = author;
-
-    delete post.authorId;
-
-    return post;
-  } catch (error) {
-    throw error;
+      `, [post.authorId])
+  
+      post.tags = tags;
+      post.author = author;
+  
+      delete post.authorId;
+  
+      return post;
+    } catch (error) {
+      throw error;
+    }
   }
-}
 
 async function getPostsByTagName(tagName) {
   try {
